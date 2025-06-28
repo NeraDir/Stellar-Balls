@@ -1,0 +1,59 @@
+workflows:
+  ios-workflow:
+    name: iOS Workflow
+    integrations:
+      app_store_connect: Stellar Balls
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.bvjhsjshieh.sdkjhfyrgjjtyp
+      vars:
+        
+        XCODE_PROJECT: "pl2706-8.xcodeproj"
+        XCODE_SCHEME: "pl2706-8"
+        APP_STORE_APPLE_ID: 6747909212
+      xcode: latest  #
+    triggering:
+      events:
+        - push
+        - tag
+        - pull_request
+      branch_patterns:
+        - pattern: 'release'
+          include: true
+          source: true
+    scripts:
+      - name: Set up code signing settings on Xcode project
+        script: |
+          xcode-project use-profiles
+      - name: Increment build number
+        script: |
+          agvtool new-version -all $(($(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID") + 1))
+      - name: Build ipa for distribution
+        script: |
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        expire_build_submitted_for_review: false
+        beta_groups:
+          - group name 1
+          - group name 2
+        submit_to_app_store: false
+      email:
+        recipients:
+          - user1@example.com
+          - user2@example.com
+        notify:
+          success: true
+          failure: true
+      slack:
+        channel: '#builds'
+        notify_on_build_start: true
+        notify:
+          success: false
+          failure: false
